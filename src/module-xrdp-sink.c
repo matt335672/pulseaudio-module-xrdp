@@ -357,8 +357,6 @@ static void process_render(struct userdata *u, pa_usec_t now) {
 static void thread_func(void *userdata) {
 
     struct userdata *u = userdata;
-    int ret;
-    pa_usec_t now;
 
     pa_assert(u);
 
@@ -413,16 +411,12 @@ finish:
     pa_log_debug("Thread shutting down");
 }
 
-static void read_xrdp_modargs(pa_modargs *ma, struct userdata *u) {
-    const char *display;
-    int display_num;
+static void set_sink_socket(pa_modargs *ma, struct userdata *u) {
     const char *socket_dir;
     const char *socket_name;
     char default_socket_name[64];
     size_t nbytes;
 
-    display = pa_modargs_get_value(ma, "display", getenv("DISPLAY"));
-    display_num = get_display_num_from_display(display);
 
     socket_dir = pa_modargs_get_value(ma, "xrdp_socket_path",
                                       getenv("XRDP_SOCKET_PATH"));
@@ -434,6 +428,10 @@ static void read_xrdp_modargs(pa_modargs *ma, struct userdata *u) {
                                        getenv("XRDP_PULSE_SINK_SOCKET"));
     if (socket_name == NULL || socket_name[0] == '\0')
     {
+        const char *display = pa_modargs_get_value(ma, "display",
+                                                   getenv("DISPLAY"));
+        int display_num = get_display_num_from_display(display);
+
         pa_log_debug("Could not obtain sink_socket from environment.");
         snprintf(default_socket_name, sizeof(default_socket_name),
                  "xrdp_chansrv_audio_out_socket_%d", display_num);
@@ -512,7 +510,7 @@ int pa__init(pa_module*m) {
     nbytes = pa_usec_to_bytes(u->block_usec, &u->sink->sample_spec);
     pa_sink_set_max_request(u->sink, nbytes);
 
-    read_xrdp_modargs(ma, u);
+    set_sink_socket(ma, u);
 
     u->fd = -1;
 
